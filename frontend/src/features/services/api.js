@@ -1,14 +1,14 @@
 import axios from "axios";
 
 const baseURL =
-    window._env_?.VITE_BACKEND_URL ||
-    import.meta.env.VITE_BACKEND_URL;
+  window._env_?.VITE_BACKEND_URL ||
+  import.meta.env.VITE_BACKEND_URL;
 
 const API = axios.create({
-    baseURL: baseURL,
-    headers: {
-        "Content-Type": "application/json"
-    }
+  baseURL: baseURL,
+  headers: {
+    "Content-Type": "application/json"
+  }
 });
 
 // Add token to requests
@@ -39,39 +39,39 @@ API.interceptors.request.use(
 );
 
 API.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        const originalRequest = error.config;
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
 
-        const isLoginRequest = originalRequest.url.includes('/auth/login');
+    const isLoginRequest = originalRequest.url.includes('/auth/login');
 
-        if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
-            originalRequest._retry = true;
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
+      originalRequest._retry = true;
 
-            try {
-                const refreshToken = sessionStorage.getItem('refresh_token');
-                if (!refreshToken) throw new Error("No refresh token");
+      try {
+        const refreshToken = sessionStorage.getItem('refresh_token');
+        if (!refreshToken) throw new Error("No refresh token");
 
-                const res = await axios.post(`${baseURL}/auth/refresh`, {
-                    refresh_token: refreshToken
-                });
-                
-                if (res.data?.access_token) {
-                    const { access_token, refresh_token } = res.data;
-                    sessionStorage.setItem('access_token', access_token);
-                    if (refresh_token) sessionStorage.setItem('refresh_token', refresh_token);
-                    
-                    originalRequest.headers.Authorization = `Bearer ${access_token}`;
-                    return API(originalRequest);
-                }
-            } catch (refreshError) {
-                sessionStorage.clear();
-                window.location.href = '/login';
-                return Promise.reject(refreshError);
-            }
+        const res = await axios.post(`${baseURL}/auth/refresh`, {
+          refresh_token: refreshToken
+        });
+
+        if (res.data?.access_token) {
+          const { access_token, refresh_token } = res.data;
+          sessionStorage.setItem('access_token', access_token);
+          if (refresh_token) sessionStorage.setItem('refresh_token', refresh_token);
+
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          return API(originalRequest);
         }
-        return Promise.reject(error);
+      } catch (refreshError) {
+        sessionStorage.clear();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
     }
+    return Promise.reject(error);
+  }
 );
 
 export default API;
